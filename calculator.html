@@ -1,0 +1,372 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#16213e">
+    <meta name="description" content="一个功能完整的计算器应用">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>计算器</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .calculator {
+            width: 100%;
+            max-width: 380px;
+            background: #16213e;
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+        
+        .display {
+            background: #0f0f23;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: right;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+        
+        .expression {
+            color: #6b7280;
+            font-size: 16px;
+            min-height: 24px;
+            overflow-x: auto;
+        }
+        
+        .result {
+            color: #ffffff;
+            font-size: 42px;
+            font-weight: 300;
+            overflow-x: auto;
+        }
+        
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        
+        button {
+            border: none;
+            border-radius: 16px;
+            font-size: 24px;
+            font-weight: 500;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+        
+        .btn-number {
+            background: #1e3a5f;
+            color: #ffffff;
+        }
+        
+        .btn-number:hover {
+            background: #2d5a8a;
+        }
+        
+        .btn-operator {
+            background: #4a5568;
+            color: #ffffff;
+        }
+        
+        .btn-operator:hover {
+            background: #5a6a7e;
+        }
+        
+        .btn-equals {
+            background: #10b981;
+            color: #ffffff;
+            grid-column: span 2;
+        }
+        
+        .btn-equals:hover {
+            background: #059669;
+        }
+        
+        .btn-clear {
+            background: #ef4444;
+            color: #ffffff;
+        }
+        
+        .btn-clear:hover {
+            background: #dc2626;
+        }
+        
+        .btn-percent, .btn-negate {
+            background: #374151;
+            color: #ffffff;
+        }
+        
+        @media (max-width: 400px) {
+            .calculator {
+                padding: 15px;
+                border-radius: 20px;
+            }
+            
+            button {
+                padding: 15px;
+                font-size: 20px;
+                border-radius: 12px;
+            }
+            
+            .result {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <div class="display">
+            <div class="expression" id="expression"></div>
+            <div class="result" id="result">0</div>
+        </div>
+        <div class="buttons">
+            <button class="btn-clear" onclick="clearAll()">C</button>
+            <button class="btn-negate" onclick="toggleSign()">±</button>
+            <button class="btn-percent" onclick="percent()">%</button>
+            <button class="btn-operator" onclick="appendOperator('/')">÷</button>
+            
+            <button class="btn-number" onclick="appendNumber('7')">7</button>
+            <button class="btn-number" onclick="appendNumber('8')">8</button>
+            <button class="btn-number" onclick="appendNumber('9')">9</button>
+            <button class="btn-operator" onclick="appendOperator('*')">×</button>
+            
+            <button class="btn-number" onclick="appendNumber('4')">4</button>
+            <button class="btn-number" onclick="appendNumber('5')">5</button>
+            <button class="btn-number" onclick="appendNumber('6')">6</button>
+            <button class="btn-operator" onclick="appendOperator('-')">−</button>
+            
+            <button class="btn-number" onclick="appendNumber('1')">1</button>
+            <button class="btn-number" onclick="appendNumber('2')">2</button>
+            <button class="btn-number" onclick="appendNumber('3')">3</button>
+            <button class="btn-operator" onclick="appendOperator('+')">+</button>
+            
+            <button class="btn-number" onclick="appendNumber('0')" style="grid-column: span 2;">0</button>
+            <button class="btn-number" onclick="appendDecimal()">.</button>
+            <button class="btn-equals" onclick="calculate()">=</button>
+        </div>
+    </div>
+
+    <script>
+        let expression = '';
+        let result = '0';
+        let justCalculated = false;
+        
+        const expressionEl = document.getElementById('expression');
+        const resultEl = document.getElementById('result');
+        
+        function updateDisplay() {
+            expressionEl.textContent = expression || '';
+            resultEl.textContent = result;
+        }
+        
+        function appendNumber(num) {
+            if (justCalculated) {
+                if (num !== '.') {
+                    expression = result === '0' ? '' : result;
+                }
+                justCalculated = false;
+            }
+            
+            if (num === '.' && expression.includes('.')) {
+                const lastNumber = expression.split(/[\+\-\*\/]/).pop();
+                if (lastNumber && lastNumber.includes('.')) return;
+            }
+            
+            if (expression === '' && num !== '.') {
+                expression = num;
+            } else {
+                expression += num;
+            }
+            
+            tryCalculatePreview();
+            updateDisplay();
+        }
+        
+        function appendOperator(op) {
+            if (expression === '' && result !== '0') {
+                expression = result;
+            }
+            
+            const lastChar = expression.slice(-1);
+            if (['+', '-', '*', '/'].includes(lastChar)) {
+                expression = expression.slice(0, -1) + op;
+            } else if (expression !== '') {
+                expression += op;
+            }
+            
+            justCalculated = false;
+            updateDisplay();
+        }
+        
+        function appendDecimal() {
+            if (justCalculated) {
+                expression = '0.';
+                justCalculated = false;
+                updateDisplay();
+                return;
+            }
+            
+            const lastNumber = expression.split(/[\+\-\*\/]/).pop();
+            if (!lastNumber || !lastNumber.includes('.')) {
+                expression += lastNumber === '' ? '0.' : '.';
+            }
+            updateDisplay();
+        }
+        
+        function clearAll() {
+            expression = '';
+            result = '0';
+            justCalculated = false;
+            updateDisplay();
+        }
+        
+        function toggleSign() {
+            if (expression === '' && result !== '0') {
+                if (result.startsWith('-')) {
+                    result = result.slice(1);
+                } else {
+                    result = '-' + result;
+                }
+            } else if (expression !== '') {
+                const lastNumberMatch = expression.match(/(-?[\d.]+)$/);
+                if (lastNumberMatch) {
+                    const lastNumber = lastNumberMatch[1];
+                    const prefix = expression.slice(0, -lastNumber.length);
+                    if (lastNumber.startsWith('-')) {
+                        expression = prefix + lastNumber.slice(1);
+                    } else {
+                        expression = prefix + '-' + lastNumber;
+                    }
+                }
+            }
+            tryCalculatePreview();
+            updateDisplay();
+        }
+        
+        function percent() {
+            if (expression !== '') {
+                const lastNumberMatch = expression.match(/(-?[\d.]+)$/);
+                if (lastNumberMatch) {
+                    const lastNumber = parseFloat(lastNumberMatch[1]);
+                    const prefix = expression.slice(0, -lastNumberMatch[1].length);
+                    expression = prefix + (lastNumber / 100).toString();
+                }
+            } else if (result !== '0') {
+                result = (parseFloat(result) / 100).toString();
+            }
+            tryCalculatePreview();
+            updateDisplay();
+        }
+        
+        function tryCalculatePreview() {
+            if (expression === '') return;
+            
+            const lastChar = expression.slice(-1);
+            if (['+', '-', '*', '/'].includes(lastChar)) return;
+            
+            try {
+                const evalResult = evaluateExpression(expression);
+                if (evalResult !== null && !isNaN(evalResult) && isFinite(evalResult)) {
+                    result = formatNumber(evalResult);
+                }
+            } catch (e) {
+                // Ignore preview errors
+            }
+        }
+        
+        function calculate() {
+            if (expression === '') return;
+            
+            const lastChar = expression.slice(-1);
+            if (['+', '-', '*', '/'].includes(lastChar)) {
+                expression = expression.slice(0, -1);
+            }
+            
+            if (expression === '') return;
+            
+            const evalResult = evaluateExpression(expression);
+            
+            if (evalResult !== null && !isNaN(evalResult) && isFinite(evalResult)) {
+                result = formatNumber(evalResult);
+                expression = expression + ' = ' + result;
+                justCalculated = true;
+            } else {
+                result = 'Error';
+                expression = '';
+            }
+            
+            updateDisplay();
+        }
+        
+        function evaluateExpression(expr) {
+            const sanitized = expr.replace(/[^0-9+\-*/.]/g, '');
+            if (sanitized === '') return null;
+            return new Function('return ' + sanitized)();
+        }
+        
+        function formatNumber(num) {
+            if (Number.isInteger(num)) {
+                return num.toString();
+            }
+            const rounded = Math.round(num * 10000000000) / 10000000000;
+            const str = rounded.toString();
+            if (str.length > 12) {
+                return rounded.toExponential(4);
+            }
+            return str;
+        }
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= '0' && e.key <= '9') appendNumber(e.key);
+            if (e.key === '.') appendDecimal();
+            if (e.key === '+' || e.key === '-') appendOperator(e.key);
+            if (e.key === '*') appendOperator('*');
+            if (e.key === '/') appendOperator('/');
+            if (e.key === 'Enter' || e.key === '=') calculate();
+            if (e.key === 'Escape') clearAll();
+            if (e.key === 'Backspace' && expression.length > 0) {
+                expression = expression.slice(0, -1);
+                tryCalculatePreview();
+                updateDisplay();
+            }
+        });
+        
+        // Register service worker for PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(() => {
+                console.log('Service Worker registered');
+            });
+        }
+    </script>
+</body>
+</html>
